@@ -149,6 +149,7 @@
         <li><a href="#claude-dir">.claude/</a></li>
         <li class="nested"><a href="#settings">settings.json</a></li>
         <li><a href="#docs-dir">docs/index.html</a></li>
+        <li><a href="#game">docs/branching-game.*</a></li>
         <li><a href="#gitignore">.gitignore</a></li>
         <li><a href="#license">LICENSE</a></li>
         <li><a href="#readme">README.md</a></li>
@@ -223,6 +224,25 @@
           browser, or publish it with GitHub Pages by serving from the <code>/docs</code>
           folder.
         </p>
+      </section>
+
+      <section class="file" id="game">
+        <h2>docs/branching-game.*</h2>
+        <p class="role">
+          <a href="branching-game.html">Branch Out</a>, a puzzle game that teaches Git
+          branching.
+        </p>
+        <p>
+          Players type Git commands until their commit graph matches a goal, across eight
+          levels that end with this repo's own <code>CLAUDE.md</code> workflow. The game
+          simulates Git in the browser and never touches a real repository.
+        </p>
+        <ul>
+          <li><code>branching-game.html</code>: the page, with its styles and interface code.</li>
+          <li><code>branching-game.js</code>: the game logic and level data, with no dependencies.</li>
+          <li><code>branching-game.test.mjs</code>: unit tests, run with <code>node --test docs/branching-game.test.mjs</code>.</li>
+          <li><code>branching-game-plan.md</code>: the design plan the game was built from.</li>
+        </ul>
       </section>
 
       <section class="file" id="gitignore">

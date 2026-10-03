@@ -1,6 +1,8 @@
 # Branch Out: a Git branching game (design plan)
 
-Status: design only. Nothing in this document has been built yet.
+Status: built. The game is `docs/branching-game.html`, its logic is
+`docs/branching-game.js`, and its tests are `docs/branching-game.test.mjs`. Where the
+build differs from the original design, this document has been updated to match.
 
 ## Goal and audience
 
@@ -97,9 +99,12 @@ It links to the "Destructive and history-changing commands" section of `CLAUDE.m
 ## Technical design
 
 - **Static files:** `docs/branching-game.html` (markup, inline CSS, and the UI code)
-  plus `docs/branching-game.js`, an ES module with the game logic that the page
-  imports. They need no build step and no dependencies, so they work on GitHub Pages
-  as is, and the logic can be unit tested in Node.
+  plus `docs/branching-game.js`, the game logic, loaded with a plain `<script>` tag.
+  The logic file is a classic script rather than an ES module because browsers block
+  module imports from `file://`, and the page should open straight from disk like
+  `docs/index.html`. It sets `window.BranchOut` in the browser and uses
+  `module.exports` in Node, so the tests can import it. Neither file needs a build
+  step or dependencies, so they work on GitHub Pages as is.
 - **Look and feel:** reuse the `:root` color tokens and the
   `prefers-color-scheme: dark` handling from `docs/index.html`, with an explicit `body`
   background and a 16px side gutter on mobile.
@@ -108,12 +113,18 @@ It links to the "Destructive and history-changing commands" section of `CLAUDE.m
   ```js
   // state
   {
-    commits: { C1: { parents: [] }, C2: { parents: ["C1"] } },
+    commits: {
+      C1: { parents: [], message: "Initial commit" },
+      C2: { parents: ["C1"], message: "Add home page" }
+    },
     branches: { main: "C2", feature: "C1" },
-    head: { branch: "main" },  // or { commit: "C1" } for a detached HEAD, which is a future feature
-    nextId: 3                  // the next commit is labeled C3
+    head: "main",  // the current branch; null in a goal means HEAD can be on any branch
+    nextId: 3      // the next commit is labeled C3
   }
   ```
+
+  Detached `HEAD` is out of scope for v1, so `head` is always a branch name. A goal can
+  set `head` to `null` when it doesn't care where `HEAD` ends up, as level 4 does.
 
 - **Pure functions:**
   - `parse(input)` returns a command object or an error.
@@ -122,12 +133,19 @@ It links to the "Destructive and history-changing commands" section of `CLAUDE.m
   - `matches(state, goal)` returns a boolean. It canonicalizes both graphs by walking
     from the branch tips, so commit labels don't matter.
   - `isMerged(state, branch)` is used by `branch -d`.
+  - `checkLevel(level, state, used)` combines `matches` with a level's `requires`
+    list, so level 8 can insist on the workflow and not just the final graph.
+  - `nudge(level, stateBefore, cmd)` returns the wrong-branch hint, or `null`.
+  - `describe(state)` and `layout(state)` produce the screen-reader text and the
+    graph positions.
 - **Rendering:** inline SVG. Each branch gets a lane (columns run left to right in
   commit order). Commits are circles, parent links are lines, and branch labels and
-  `HEAD` are tags. The SVG is rerendered from state after each command, with a CSS
-  transition on positions.
-- **Levels:** a `LEVELS` array of `{ id, title, intro, start, goal, hint, explanation, par }`,
-  exported from the module.
+  `HEAD` are tags. The SVG is redrawn from state after each command, and commits that
+  are new or whose labels moved pulse briefly (no pulse with reduced motion). Goal
+  graphs leave commit circles unlabeled, since labels don't have to match.
+- **Levels:** a `LEVELS` array of
+  `{ id, title, intro, note?, start, goal, hint, explanation, par, commitOn?, requires?, requireMessage?, solution }`,
+  exported from the logic file. `solution` is a reference answer used by the tests.
 - **Progress:** completed levels and best command counts are saved in `localStorage`
   under one key. Every read and write is wrapped in try/catch, and the game works
   without storage.
@@ -155,9 +173,11 @@ These are listed as future levels:
 
 ## Testing plan for the build
 
-- **Unit tests:** `docs/branching-game.test.mjs`, run with `node --test`, for `parse`,
-  `apply` (each command, plus error cases), `matches` (same structure with different
-  IDs), and `isMerged`, imported from `docs/branching-game.js`.
+- **Unit tests:** `docs/branching-game.test.mjs`, run with
+  `node --test docs/branching-game.test.mjs`, for `parse`, `apply` (each command, plus
+  error cases), `matches` (same structure with different labels), `isMerged`,
+  `checkLevel`, `nudge`, `describe`, and `layout`, imported from
+  `docs/branching-game.js`.
 - **Level solvability:** a test applies each level's reference solution and asserts
   that it matches the goal within par.
 - **Manual pass:** play every level in light and dark mode, at desktop and phone

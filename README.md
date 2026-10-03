@@ -25,6 +25,7 @@ You can use it three ways:
 | `.claude/settings.json` | Project permission rules that enforce the most important parts of that guidance. |
 | `.gitignore` | Ignores common build output, caches, editor files, and secrets such as `.env` and `*.pem`. |
 | `docs/index.html` | A single-page web guide to the files in this repo. Open it in a browser, or publish it with GitHub Pages from the `/docs` folder. |
+| [`docs/branching-game.html`](docs/branching-game.html) | *Branch Out*, a browser puzzle game that teaches Git branching: type Git commands until your commit graph matches the goal. The logic is in `docs/branching-game.js`, with tests you can run using `node --test docs/branching-game.test.mjs`. The design is in `docs/branching-game-plan.md`. |
 
 ### Safeguards in `.claude/settings.json`
 
