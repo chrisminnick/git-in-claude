@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Branch Out</title>
+  <meta name="description" content="A browser puzzle game that teaches Git branching: type Git commands to make your commit graph match the goal.">
+  <style>
+    :root {
+      --bg: #fafaf9;
+      --surface: #ffffff;
+      --text: #1c1917;
+      --muted: #57534e;
+      --border: #e7e5e4;
+      --accent: #c2410c;
+      --on-accent: #ffffff;
+      --code-bg: #f5f5f4;
+      --allow: #15803d;
+      --allow-bg: #f0fdf4;
+      --ask: #a16207;
+      --ask-bg: #fefce8;
+      --deny: #b91c1c;
+      --deny-bg: #fef2f2;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #1c1917;
+        --surface: #292524;
+        --text: #f5f5f4;
+        --muted: #a8a29e;
+        --border: #44403c;
+        --accent: #fb923c;
+        --on-accent: #1c1917;
+        --code-bg: #1c1917;
+        --allow: #4ade80;
+        --allow-bg: #14532d40;
+        --ask: #facc15;
+        --ask-bg: #713f1240;
+        --deny: #f87171;
+        --deny-bg: #7f1d1d40;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    code, .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    code {
+      font-size: 0.9em;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.05em 0.3em;
+    }
+    a { color: var(--accent); }
+    .visually-hidden {
+      position: absolute; width: 1px; height: 1px; overflow: hidden;
+      clip: rect(0 0 0 0); white-space: nowrap;
+    }
+
+    header, main { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+    header { padding-top: 32px; padding-bottom: 16px; }
+    header .back { font-size: 0.9rem; }
+    header h1 { margin: 8px 0 4px; font-size: 2rem; }
+    header p { margin: 0; color: var(--muted); max-width: 65ch; }
+
+    main {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 32px;
+      padding-bottom: 64px;
+    }
+
+    /* Level picker */
+    nav h2 {
+      font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--muted); margin: 0 0 8px;
+    }
+    nav ol { list-style: none; margin: 0; padding: 0; }
+    nav button {
+      display: flex; justify-content: space-between; gap: 8px; width: 100%;
+      padding: 6px 8px; border: 0; border-radius: 6px; background: none;
+      color: var(--text); font: inherit; font-size: 0.95rem; text-align: left; cursor: pointer;
+    }
+    nav button:hover, nav button:focus-visible { background: var(--code-bg); }
+    nav button[aria-current="step"] { background: var(--code-bg); font-weight: 600; }
+    nav .done { color: var(--allow); font-size: 0.85rem; white-space: nowrap; }
+
+    /* Level panel */
+    .level {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 24px; min-width: 0;
+    }
+    .level h2 { margin: 0 0 4px; font-size: 1.4rem; }
+    .intro { margin: 0 0 8px; }
+    .note { margin: 0 0 16px; color: var(--muted); font-size: 0.95rem; }
+
+    .graphs {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0;
+    }
+    figure {
+      margin: 0; border: 1px solid var(--border); border-radius: 8px;
+      padding: 12px; background: var(--bg); min-width: 0;
+    }
+    figcaption {
+      font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--muted); margin-bottom: 8px; display: flex; justify-content: space-between;
+    }
+    figcaption .aside { text-transform: none; letter-spacing: 0; }
+    svg.graph { display: block; width: 100%; height: auto; max-height: 260px; }
+
+    .edge { stroke: var(--muted); stroke-width: 2; fill: none; }
+    .node circle { fill: var(--surface); stroke: var(--accent); stroke-width: 2.5; }
+    .node text { fill: var(--text); font: 600 11px ui-monospace, Menlo, monospace; text-anchor: middle; dominant-baseline: central; }
+    .goal .node circle { stroke: var(--muted); stroke-dasharray: 4 3; }
+    .tag rect { fill: var(--surface); stroke: var(--text); stroke-width: 1.2; }
+    .tag text { fill: var(--text); font: 12px ui-monospace, Menlo, monospace; text-anchor: middle; dominant-baseline: central; }
+    .tag.head rect { fill: var(--accent); stroke: var(--accent); }
+    .tag.head text { fill: var(--on-accent); font-weight: 600; }
+    .pulse circle { animation: pulse 0.9s ease-out; }
+    @keyframes pulse {
+      0% { stroke-width: 8; }
+      100% { stroke-width: 2.5; }
+    }
+
+    /* Terminal */
+    .terminal {
+      border: 1px solid var(--border); border-radius: 8px; background: var(--code-bg);
+      font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .log {
+      max-height: 220px; overflow-y: auto; padding: 12px 12px 0;
+      white-space: pre-wrap; overflow-wrap: anywhere;
+    }
+    .log p { margin: 0 0 6px; }
+    .log .cmd { color: var(--muted); }
+    .log .err { color: var(--deny); }
+    .log .info { color: var(--ask); }
+    .log .good { color: var(--allow); }
+    .terminal form { display: flex; gap: 8px; align-items: center; padding: 8px 12px 12px; }
+    .terminal form span { color: var(--accent); font-weight: 600; }
+    .terminal input {
+      flex: 1; min-width: 0; border: 0; background: transparent; color: var(--text);
+      font: inherit; padding: 4px 0; outline: none;
+    }
+    .terminal:focus-within { border-color: var(--accent); }
+
+    .controls {
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px;
+    }
+    .controls button, .success button {
+      font: inherit; font-size: 0.9rem; padding: 6px 12px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer;
+    }
+    .controls button:hover, .controls button:focus-visible { border-color: var(--accent); }
+    .moves { margin-left: auto; color: var(--muted); font-size: 0.9rem; }
+
+    .success {
+      margin-top: 16px; padding: 12px 16px; border-left: 4px solid var(--allow);
+      background: var(--allow-bg); border-radius: 8px;
+    }
+    .success h3 { margin: 0 0 4px; color: var(--allow); font-size: 1rem; }
+    .success p { margin: 0 0 8px; }
+    .success button { background: var(--allow); border-color: var(--allow); color: var(--surface); font-weight: 600; }
+
+    details { margin-top: 16px; font-size: 0.95rem; }
+    details summary { cursor: pointer; color: var(--muted); }
+    details ul { padding-left: 20px; }
+
+    footer { color: var(--muted); font-size: 0.9rem; margin-top: 24px; }
+
+    @media (max-width: 720px) {
+      main { grid-template-columns: 1fr; gap: 16px; }
+      nav ol { display: flex; flex-wrap: wrap; gap: 4px; }
+      nav li { flex: 0 0 auto; }
+      nav button .name { display: none; }
+      .level { padding: 16px; }
+      .graphs { grid-template-columns: 1fr; }
+      .graphs .goal { order: -1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .pulse circle { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="back" href="index.html">&larr; git-in-claude files</a>
+    <h1>Branch Out</h1>
+    <p>
+      A puzzle game about Git branches. Type Git commands until your commit graph matches
+      the goal. The game simulates Git in your browser; no real repository is touched.
+    </p>
+  </header>
+
+  <main>
+    <nav aria-label="Levels">
+      <h2>Levels</h2>
+      <ol id="levels"></ol>
+    </nav>
+
+    <div>
+      <section class="level" aria-labelledby="level-title">
+        <h2 id="level-title"></h2>
+        <p class="intro" id="intro"></p>
+        <p class="note" id="note" hidden></p>
+
+        <div class="graphs">
+          <figure class="current">
+            <figcaption>Your graph</figcaption>
+            <svg class="graph" id="current-graph" role="img" aria-labelledby="current-desc"></svg>
+            <p class="visually-hidden" id="current-desc" aria-live="polite"></p>
+          </figure>
+          <figure class="goal">
+            <figcaption>Goal <span class="aside" id="goal-aside"></span></figcaption>
+            <svg class="graph" id="goal-graph" role="img" aria-labelledby="goal-desc"></svg>
+            <p class="visually-hidden" id="goal-desc"></p>
+          </figure>
+        </div>
+
+        <div class="terminal">
+          <div class="log" id="log" role="log" aria-live="polite" aria-label="Terminal output"></div>
+          <form id="command-form" autocomplete="off">
+            <span aria-hidden="true">$</span>
+            <label for="command" class="visually-hidden">Git command</label>
+            <input id="command" type="text" spellcheck="false" autocapitalize="off" autocorrect="off"
+                   placeholder="git commit">
+          </form>
+        </div>
+
+        <div class="controls">
+          <button type="button" id="hint-btn">Hint</button>
+          <button type="button" id="undo-btn">Undo</button>
+          <button type="button" id="reset-btn">Reset level</button>
+          <span class="moves" id="moves" aria-live="polite"></span>
+        </div>
+
+        <div class="success" id="success" hidden>
+          <h3>Solved!</h3>
+          <p id="explanation"></p>
+          <button type="button" id="next-btn">Next level &rarr;</button>
+        </div>
+
+        <details>
+          <summary>Commands you can use</summary>
+          <ul>
+            <li><code>git commit</code> or <code>git commit -m "message"</code></li>
+            <li><code>git branch</code>, <code>git branch &lt;name&gt;</code>, <code>git branch -d &lt;name&gt;</code></li>
+            <li><code>git switch &lt;name&gt;</code>, <code>git switch -c &lt;name&gt;</code> (or <code>git checkout</code>, <code>git checkout -b</code>)</li>
+            <li><code>git merge &lt;name&gt;</code></li>
+            <li><code>git log --oneline</code>, <code>git status</code></li>
+            <li><code>hint</code>, <code>undo</code>, <code>reset</code></li>
+          </ul>
+          <p>Use the up and down arrow keys to recall earlier commands.</p>
+        </details>
+      </section>
+
+      <footer>
+        <p>
+          Part of <a href="index.html">git-in-claude</a>, created by Chris Minnick for Chapter 9
+          of <cite>Claude Code For Dummies</cite> (Wiley).
+        </p>
+      </footer>
+    </div>
+  </main>
+
+  <script src="branching-game.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      const { parse, apply, checkLevel, nudge, describe, layout, LEVELS } = window.BranchOut;
+
+      const STORAGE_KEY = 'branch-out-progress';
+      const CLAUDE_MD_URL = 'https://github.com/chrisminnick/git-in-claude/blob/main/CLAUDE.md#destructive-and-history-changing-commands';
+      const SVG_NS = 'http://www.w3.org/2000/svg';
+      const $ = (id) => document.getElementById(id);
+
+      // --- Progress (per browser, optional) ---
+      function loadProgress() {
+        try {
+          return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+        } catch (e) {
+          return {};
+        }
+      }
+      function saveProgress() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+        } catch (e) { /* storage unavailable: progress lasts for this visit only */ }
+      }
+      const progress = loadProgress(); // { [levelId]: bestMoves }
+
+      // --- Game state ---
+      let levelIndex = 0;
+      let history = [];     // [{ state, used }]; history.length - 1 is the move count
+      let solved = false;
+      const typed = [];     // commands typed, for arrow-key recall
+      let recall = 0;
+
+      const level = () => LEVELS[levelIndex];
+      const current = () => history[history.length - 1];
+
+      // --- Rendering the commit graph ---
+      const COL = 64, LANE = 84, R = 15, TAG_H = 20, TAG_GAP = 4, PAD = 12;
+
+      function el(name, attrs, parent) {
+        const node = document.createElementNS(SVG_NS, name);
+        for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+        if (parent) parent.appendChild(node);
+        return node;
+      }
+
+      function tagWidth(text) {
+        return text.length * 7.4 + 14;
+      }
+
+      // Draws `state` into `svg`. Commit labels are hidden in the goal graph, since
+      // they don't need to match. `highlight` is a set of commit IDs to pulse.
+      function drawGraph(svg, state, { showLabels, highlight }) {
+        svg.replaceChildren();
+        const { nodes, edges, tags } = layout(state);
+        const tagsAt = {};
+        for (const t of tags) (tagsAt[t.at] = tagsAt[t.at] || []).push(t);
+        const maxStack = Math.max(1, ...Object.values(tagsAt).map((list) => list.length));
+        const top = PAD + maxStack * (TAG_H + TAG_GAP) + R;
+
+        const pos = {};
+        for (const n of nodes) pos[n.id] = { x: n.col * COL, y: top + n.lane * LANE };
+
+        let minX = Infinity, maxX = -Infinity, maxY = 0;
+        const widen = (x1, x2) => { minX = Math.min(minX, x1); maxX = Math.max(maxX, x2); };
+
+        for (const e of edges) {
+          const a = pos[e.from], b = pos[e.to];
+          const d = a.y === b.y
+            ? `M${a.x},${a.y} L${b.x},${b.y}`
+            : `M${a.x},${a.y} C${a.x - COL / 2},${a.y} ${b.x + COL / 2},${b.y} ${b.x},${b.y}`;
+          el('path', { d, class: 'edge' }, svg);
+        }
+
+        for (const n of nodes) {
+          const { x, y } = pos[n.id];
+          const g = el('g', { class: 'node' + (highlight && highlight.has(n.id) ? ' pulse' : '') }, svg);
+          el('circle', { cx: x, cy: y, r: R }, g);
+          if (showLabels) {
+            const t = el('text', { x, y }, g);
+            t.textContent = n.id;
+            el('title', {}, g).textContent = `${n.id} ${n.message}`;
+          }
+          widen(x - R, x + R);
+          maxY = Math.max(maxY, y + R);
+        }
+
+        for (const [at, list] of Object.entries(tagsAt)) {
+          const { x, y } = pos[at];
+          // HEAD's branch sits closest to the commit.
+          list.sort((a, b) => Number(b.head) - Number(a.head));
+          list.forEach((t, i) => {
+            const text = t.head ? `HEAD → ${t.branch}` : t.branch;
+            const w = tagWidth(text);
+            const ty = y - R - TAG_GAP - (i + 1) * TAG_H - i * TAG_GAP;
+            const g = el('g', { class: 'tag' + (t.head ? ' head' : '') }, svg);
+            el('rect', { x: x - w / 2, y: ty, width: w, height: TAG_H, rx: 5 }, g);
+            const label = el('text', { x, y: ty + TAG_H / 2 }, g);
+            label.textContent = text;
+            widen(x - w / 2, x + w / 2);
+          });
+        }
+
+        const width = maxX - minX + PAD * 2;
+        svg.setAttribute('viewBox', `${minX - PAD} 0 ${width} ${maxY + PAD}`);
+        svg.style.maxWidth = `${Math.max(width, 160)}px`;
+      }
+
+      // Commits that are new, or whose branch labels moved, since `before`.
+      function changedCommits(before, after) {
+        const changed = new Set();
+        for (const id of Object.keys(after.commits)) if (!before.commits[id]) changed.add(id);
+        for (const [b, tip] of Object.entries(after.branches)) if (before.branches[b] !== tip) changed.add(tip);
+        if (before.head !== after.head && after.branches[after.head]) changed.add(after.branches[after.head]);
+        return changed;
+      }
+
+      // --- Terminal ---
+      function print(text, kind) {
+        const p = document.createElement('p');
+        if (kind) p.className = kind;
+        p.textContent = text;
+        $('log').appendChild(p);
+        $('log').scrollTop = $('log').scrollHeight;
+        return p;
+      }
+
+      function printUnmergedNote() {
+        const p = print('Git protects work that isn\'t merged anywhere. Deleting this branch would lose its commits. See ', 'info');
+        const a = document.createElement('a');
+        a.href = CLAUDE_MD_URL;
+        a.textContent = 'Destructive and history-changing commands in CLAUDE.md';
+        p.append(a, '.');
+      }
+
+      // --- Level flow ---
+      function render(highlight) {
+        const st = current().state;
+        drawGraph($('current-graph'), st, { showLabels: true, highlight });
+        $('current-desc').textContent = 'Your graph: ' + describe(st);
+        const moves = history.length - 1;
+        $('moves').textContent = `Moves: ${moves} · Par: ${level().par}`;
+        $('undo-btn').disabled = moves === 0;
+      }
+
+      function renderLevelList() {
+        const list = $('levels');
+        list.replaceChildren();
+        LEVELS.forEach((lvl, i) => {
+          const li = document.createElement('li');
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          if (i === levelIndex) btn.setAttribute('aria-current', 'step');
+          const label = document.createElement('span');
+          label.innerHTML = `${lvl.id}<span class="name">. ${lvl.title}</span>`;
+          btn.appendChild(label);
+          if (progress[lvl.id] !== undefined) {
+            const done = document.createElement('span');
+            done.className = 'done';
+            done.textContent = `✓ ${progress[lvl.id]}`;
+            done.setAttribute('aria-label', `solved in ${progress[lvl.id]} moves`);
+            btn.appendChild(done);
+          }
+          btn.addEventListener('click', () => startLevel(i));
+          li.appendChild(btn);
+          list.appendChild(li);
+        });
+      }
+
+      function startLevel(i) {
+        levelIndex = i;
+        const lvl = level();
+        history = [{ state: lvl.start, used: [] }];
+        solved = false;
+        $('level-title').textContent = `Level ${lvl.id}: ${lvl.title}`;
+        $('intro').textContent = lvl.intro;
+        $('note').hidden = !lvl.note;
+        $('note').textContent = lvl.note || '';
+        $('success').hidden = true;
+        $('log').replaceChildren();
+        print(`Level ${lvl.id}. Type a Git command below, or hint if you're stuck.`, 'info');
+
+        drawGraph($('goal-graph'), lvl.goal, { showLabels: false });
+        $('goal-desc').textContent = 'Goal: ' + describe(lvl.goal) + (lvl.goal.head ? '' : ' HEAD can be on any branch.');
+        $('goal-aside').textContent = lvl.goal.head ? '' : 'HEAD can be anywhere';
+
+        renderLevelList();
+        render();
+        $('command').focus();
+      }
+
+      function checkSolved() {
+        const result = checkLevel(level(), current().state, current().used);
+        if (result.solved && !solved) {
+          solved = true;
+          const moves = history.length - 1;
+          const lvl = level();
+          const best = progress[lvl.id];
+          if (best === undefined || moves < best) {
+            progress[lvl.id] = moves;
+            saveProgress();
+          }
+          const parText = moves <= lvl.par ? 'right on par' : `par is ${lvl.par}`;
+          print(`Solved in ${moves} ${moves === 1 ? 'move' : 'moves'} (${parText}).`, 'good');
+          $('explanation').textContent = lvl.explanation;
+          $('next-btn').hidden = levelIndex === LEVELS.length - 1;
+          $('success').hidden = false;
+          renderLevelList();
+        } else if (!result.solved) {
+          if (solved) {
+            solved = false;
+            $('success').hidden = true;
+          }
+          if (result.message) print(result.message, 'info');
+        }
+      }
+
+      function run(input) {
+        if (!input.trim()) return;
+        print('$ ' + input, 'cmd');
+        const cmd = parse(input);
+        if (cmd.error) {
+          print(cmd.error, 'err');
+          return;
+        }
+
+        if (cmd.name === 'hint') {
+          print(level().hint, 'info');
+          return;
+        }
+        if (cmd.name === 'undo') {
+          if (history.length > 1) {
+            history.pop();
+            solved = false;
+            $('success').hidden = true;
+            print('Undid the last command.', 'info');
+            render();
+          } else {
+            print('Nothing to undo.', 'info');
+          }
+          return;
+        }
+        if (cmd.name === 'reset') {
+          startLevel(levelIndex);
+          print('Level reset.', 'info');
+          return;
+        }
+
+        const before = current();
+        const result = apply(before.state, cmd);
+        if (result.error) {
+          print(result.error, 'err');
+          if (result.unmerged) printUnmergedNote();
+          return;
+        }
+        if (result.output) print(result.output);
+        const tip = nudge(level(), before.state, cmd);
+        if (tip) print(tip, 'info');
+
+        if (result.changed) {
+          history.push({
+            state: result.state,
+            used: before.used.concat({ ...cmd, on: before.state.head }),
+          });
+          render(changedCommits(before.state, result.state));
+          checkSolved();
+        }
+      }
+
+      // --- Wiring ---
+      $('command-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const input = $('command').value;
+        $('command').value = '';
+        if (input.trim()) {
+          typed.push(input);
+          recall = typed.length;
+        }
+        run(input);
+      });
+
+      $('command').addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowUp' && recall > 0) {
+          recall -= 1;
+          $('command').value = typed[recall];
+          event.preventDefault();
+        } else if (event.key === 'ArrowDown' && recall < typed.length) {
+          recall += 1;
+          $('command').value = typed[recall] || '';
+          event.preventDefault();
+        }
+      });
+
+      $('hint-btn').addEventListener('click', () => { run('hint'); $('command').focus(); });
+      $('undo-btn').addEventListener('click', () => { run('undo'); $('command').focus(); });
+      $('reset-btn').addEventListener('click', () => { run('reset'); $('command').focus(); });
+      $('next-btn').addEventListener('click', () => startLevel(Math.min(levelIndex + 1, LEVELS.length - 1)));
+
+      // Start at the first unsolved level.
+      const firstOpen = LEVELS.findIndex((lvl) => progress[lvl.id] === undefined);
+      startLevel(firstOpen === -1 ? 0 : firstOpen);
+    })();
+  </script>
+</body>
+</html>

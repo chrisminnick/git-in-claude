@@ -1,0 +1,188 @@
+# Branch Out: a Git branching game (design plan)
+
+Status: built. The game is `docs/branching-game.html`, its logic is
+`docs/branching-game.js`, and its tests are `docs/branching-game.test.mjs`. Where the
+build differs from the original design, this document has been updated to match.
+
+## Goal and audience
+
+*Branch Out* is a short browser puzzle game for Git beginners. By the end, a player
+should understand that:
+
+- A commit records a snapshot and points back to its parent commit or commits.
+- A branch is a movable label that points to one commit.
+- `HEAD` shows where you are: usually on a branch, and new commits move that branch
+  forward.
+- Merging either moves a label forward (a fast-forward) or creates a commit with two
+  parents (a three-way merge).
+
+The game lives next to `docs/index.html` and is linked from it, so it's served by GitHub
+Pages along with the rest of the site. The README links to it too: the build adds a
+`docs/branching-game.html` row to the README's "What's included" table, next to the
+`docs/index.html` row. The game also reinforces the branch-first workflow in
+this repo's `CLAUDE.md`.
+
+## Core loop
+
+1. A level opens with a one-sentence concept intro and a **goal graph**.
+2. The player's **current graph** is on the left, and the goal graph is on the right.
+3. The player types Git commands into a terminal-style input below the graphs.
+4. After each command, the current graph animates to its new state, and a short line of
+   output appears in the terminal, as real Git would print.
+5. When the current graph matches the goal, the level is solved. A short explanation
+   appears, along with the player's command count compared with par.
+
+**Commit labels:** commits are labeled `C1`, `C2`, `C3`, and so on, in the order they
+were created, instead of realistic SHAs. Short labels are easy to say aloud in class
+("`main` points to C3"). Each level's start state sets the first labels, and new commits
+continue the sequence. The labels appear inside the commit circles and in terminal
+output, for example `[main C4] Add search page` after `git commit` and
+`C4 Add search page` in `git log --oneline`. A note in level 1 explains that real Git
+uses SHAs such as `a1b2c3d`.
+
+**Matching rule:** two graphs match when they have the same commit structure (parent
+relationships), the same branch names pointing at corresponding commits, and the same
+`HEAD`. Commit labels and the order commits were made in are ignored, so any valid
+solution counts, even one whose labels differ from the goal's.
+
+## Supported commands
+
+The game simulates a small subset of Git. It doesn't run real Git.
+
+| Command | Behavior |
+| --- | --- |
+| `git commit` (with or without `-m "..."`) | Adds a commit whose parent is the current commit, and moves the current branch to it. |
+| `git branch` | Lists branches and marks the current one. |
+| `git branch <name>` | Creates a branch at the current commit. `HEAD` doesn't move. |
+| `git branch -d <name>` | Deletes a branch only if it has been merged into the current branch. Refuses with Git's real error message otherwise. |
+| `git switch <name>` / `git checkout <name>` | Moves `HEAD` to that branch. |
+| `git switch -c <name>` / `git checkout -b <name>` | Creates a branch and switches to it. |
+| `git merge <name>` | Fast-forwards when possible. Otherwise creates a merge commit with two parents. |
+| `git log --oneline` | Prints the history reachable from `HEAD`. |
+| `git status` | Prints `On branch <name>`. |
+| `hint` | Shows the level's hint. |
+| `undo` | Reverts the last command. |
+| `reset` | Restarts the level. This is a game command, not `git reset`. |
+
+Anything else gets a friendly message: "That command isn't part of this game. Try
+`hint`." Invalid branch names and switching to a missing branch get errors worded like
+real Git's.
+
+## Levels
+
+| # | Title | Start state | Goal | Teaches | Par |
+| --- | --- | --- | --- | --- | --- |
+| 1 | First commits | One commit on `main` | Three commits on `main` | Commits form a chain, and the branch moves along with them | 2 |
+| 2 | Make a branch | Two commits on `main` | `feature` points at the same commit, with `HEAD` still on `main` | `git branch` creates a label but doesn't move you | 1 |
+| 3 | Go there and commit | Level 2's goal | One new commit on `feature`, with `HEAD` on `feature` | Switching changes which label moves | 2 |
+| 4 | Diverge | `main` and `feature` at the same commit | One new commit on each branch | Branches can split | 3 |
+| 5 | Fast-forward | `feature` is two commits ahead of `main` | `main` and `feature` at the same commit | A merge with no new work on the target just moves the label | 2 |
+| 6 | Real merge | Level 4's goal | A merge commit on `main` with two parents | A three-way merge | 2 |
+| 7 | Tidy up | A merged `feature` and an unmerged `experiment` | `feature` deleted, `experiment` kept | `-d` deletes only merged branches | 1 |
+| 8 | The house workflow | One commit on `main` | Branch `feature/add-search-page` with two commits, merged into `main`, then deleted | The `CLAUDE.md` workflow from start to finish | 6 |
+
+In level 7, the explanation for the `-d` refusal teaches why Git protects unmerged work.
+It links to the "Destructive and history-changing commands" section of `CLAUDE.md`.
+
+## Teaching aids
+
+- **Concept intro:** one sentence per level, shown above the graphs.
+- **Hint:** one hint per level, available through the `hint` command or a button.
+- **Explanation on success:** two or three sentences about what just happened and why.
+- **Visual emphasis:** branch labels are colored tags, and `HEAD` is a distinct marker
+  attached to the current branch. The commit that changed in the last step pulses
+  briefly.
+- **Common-mistake nudges:** if the player commits on the wrong branch, such as on
+  `main` when the goal needs the commit on `feature`, the game shows a hint pointing
+  to `git switch` without failing the level.
+
+## Technical design
+
+- **Static files:** `docs/branching-game.html` (markup, inline CSS, and the UI code)
+  plus `docs/branching-game.js`, the game logic, loaded with a plain `<script>` tag.
+  The logic file is a classic script rather than an ES module because browsers block
+  module imports from `file://`, and the page should open straight from disk like
+  `docs/index.html`. It sets `window.BranchOut` in the browser and uses
+  `module.exports` in Node, so the tests can import it. Neither file needs a build
+  step or dependencies, so they work on GitHub Pages as is.
+- **Look and feel:** reuse the `:root` color tokens and the
+  `prefers-color-scheme: dark` handling from `docs/index.html`, with an explicit `body`
+  background and a 16px side gutter on mobile.
+- **Model:**
+
+  ```js
+  // state
+  {
+    commits: {
+      C1: { parents: [], message: "Initial commit" },
+      C2: { parents: ["C1"], message: "Add home page" }
+    },
+    branches: { main: "C2", feature: "C1" },
+    head: "main",  // the current branch; null in a goal means HEAD can be on any branch
+    nextId: 3      // the next commit is labeled C3
+  }
+  ```
+
+  Detached `HEAD` is out of scope for v1, so `head` is always a branch name. A goal can
+  set `head` to `null` when it doesn't care where `HEAD` ends up, as level 4 does.
+
+- **Pure functions:**
+  - `parse(input)` returns a command object or an error.
+  - `apply(state, cmd)` returns `{ state, output }` or `{ error }`. It never mutates
+    its input, which makes `undo` a simple history stack.
+  - `matches(state, goal)` returns a boolean. It canonicalizes both graphs by walking
+    from the branch tips, so commit labels don't matter.
+  - `isMerged(state, branch)` is used by `branch -d`.
+  - `checkLevel(level, state, used)` combines `matches` with a level's `requires`
+    list, so level 8 can insist on the workflow and not just the final graph.
+  - `nudge(level, stateBefore, cmd)` returns the wrong-branch hint, or `null`.
+  - `describe(state)` and `layout(state)` produce the screen-reader text and the
+    graph positions.
+- **Rendering:** inline SVG. Each branch gets a lane (columns run left to right in
+  commit order). Commits are circles, parent links are lines, and branch labels and
+  `HEAD` are tags. The SVG is redrawn from state after each command, and commits that
+  are new or whose labels moved pulse briefly (no pulse with reduced motion). Goal
+  graphs leave commit circles unlabeled, since labels don't have to match.
+- **Levels:** a `LEVELS` array of
+  `{ id, title, intro, note?, start, goal, hint, explanation, par, commitOn?, requires?, requireMessage?, solution }`,
+  exported from the logic file. `solution` is a reference answer used by the tests.
+- **Progress:** completed levels and best command counts are saved in `localStorage`
+  under one key. Every read and write is wrapped in try/catch, and the game works
+  without storage.
+
+## Accessibility and layout
+
+- The command input has focus on load. Up and down arrows recall previous commands,
+  and `Enter` runs the current one.
+- Each graph has a text description for screen readers (for example, "main points to
+  C3; feature points to C2; HEAD is on main"), updated in an
+  `aria-live` region.
+- Branch colors are paired with text labels, so color is never the only signal.
+- At phone width, the goal graph stacks above the current graph, and the terminal
+  stays full width with no horizontal page scroll.
+
+## Out of scope for v1
+
+These are listed as future levels:
+
+- Detached `HEAD` (`git switch --detach`, checking out a commit directly)
+- `git rebase`
+- Remotes: `fetch`, `pull`, `push`, and tracking branches
+- Merge conflicts
+- `git reset` and `git revert`
+
+## Testing plan for the build
+
+- **Unit tests:** `docs/branching-game.test.mjs`, run with
+  `node --test docs/branching-game.test.mjs`, for `parse`, `apply` (each command, plus
+  error cases), `matches` (same structure with different labels), `isMerged`,
+  `checkLevel`, `nudge`, `describe`, and `layout`, imported from
+  `docs/branching-game.js`.
+- **Level solvability:** a test applies each level's reference solution and asserts
+  that it matches the goal within par.
+- **Manual pass:** play every level in light and dark mode, at desktop and phone
+  widths, using only the keyboard.
+
+## Open questions
+
+- Is a par command count motivating or distracting for beginners?
