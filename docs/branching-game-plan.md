@@ -15,7 +15,9 @@ should understand that:
   parents (a three-way merge).
 
 The game lives next to `docs/index.html` and is linked from it, so it's served by GitHub
-Pages along with the rest of the site. It also reinforces the branch-first workflow in
+Pages along with the rest of the site. The README links to it too: the build adds a
+`docs/branching-game.html` row to the README's "What's included" table, next to the
+`docs/index.html` row. The game also reinforces the branch-first workflow in
 this repo's `CLAUDE.md`.
 
 ## Core loop
@@ -163,5 +165,4 @@ These are listed as future levels:
 
 ## Open questions
 
-- Should the README link to the game, or only `docs/index.html`?
 - Is a par command count motivating or distracting for beginners?
