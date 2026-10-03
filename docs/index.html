@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>git-in-claude Files</title>
+  <meta name="description" content="A guide to the files in the git-in-claude repository and what each one does.">
+  <style>
+    :root {
+      --bg: #fafaf9;
+      --surface: #ffffff;
+      --text: #1c1917;
+      --muted: #57534e;
+      --border: #e7e5e4;
+      --accent: #c2410c;
+      --code-bg: #f5f5f4;
+      --allow: #15803d;
+      --allow-bg: #f0fdf4;
+      --ask: #a16207;
+      --ask-bg: #fefce8;
+      --deny: #b91c1c;
+      --deny-bg: #fef2f2;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #1c1917;
+        --surface: #292524;
+        --text: #f5f5f4;
+        --muted: #a8a29e;
+        --border: #44403c;
+        --accent: #fb923c;
+        --code-bg: #1c1917;
+        --allow: #4ade80;
+        --allow-bg: #14532d40;
+        --ask: #facc15;
+        --ask-bg: #713f1240;
+        --deny: #f87171;
+        --deny-bg: #7f1d1d40;
+      }
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    code {
+      font: 0.9em ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.05em 0.3em;
+    }
+    a { color: var(--accent); }
+
+    header, main { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+    header { padding-top: 48px; padding-bottom: 24px; }
+    header h1 { margin: 0 0 8px; font-size: 2rem; }
+    header p { margin: 0; color: var(--muted); max-width: 65ch; }
+
+    main {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 32px;
+      padding-bottom: 64px;
+    }
+
+    nav { position: sticky; top: 24px; align-self: start; }
+    nav h2 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin: 0 0 8px;
+    }
+    nav ul { list-style: none; margin: 0; padding: 0; font-family: ui-monospace, Menlo, monospace; font-size: 0.9rem; }
+    nav li a {
+      display: block;
+      padding: 4px 8px;
+      border-radius: 6px;
+      color: var(--text);
+      text-decoration: none;
+    }
+    nav li a:hover, nav li a:focus-visible { background: var(--code-bg); }
+    nav li.nested a { padding-left: 24px; }
+
+    section.file {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      scroll-margin-top: 24px;
+    }
+    section.file h2 {
+      margin: 0 0 4px;
+      font: 600 1.25rem ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .role { margin: 0 0 16px; color: var(--muted); }
+    section.file h3 { font-size: 1rem; margin: 20px 0 8px; }
+    section.file ul { padding-left: 20px; margin: 0; }
+    section.file li { margin-bottom: 4px; }
+
+    .tiers { display: grid; gap: 12px; margin-top: 12px; }
+    .tier { border-radius: 8px; padding: 12px 16px; border-left: 4px solid; }
+    .tier h4 { margin: 0 0 4px; font-size: 0.95rem; }
+    .tier p { margin: 0; font-size: 0.95rem; }
+    .tier.allow { background: var(--allow-bg); border-color: var(--allow); }
+    .tier.allow h4 { color: var(--allow); }
+    .tier.ask { background: var(--ask-bg); border-color: var(--ask); }
+    .tier.ask h4 { color: var(--ask); }
+    .tier.deny { background: var(--deny-bg); border-color: var(--deny); }
+    .tier.deny h4 { color: var(--deny); }
+
+    .note {
+      margin-top: 16px;
+      padding: 12px 16px;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    footer { color: var(--muted); font-size: 0.9rem; }
+
+    @media (max-width: 720px) {
+      main { grid-template-columns: 1fr; gap: 16px; }
+      nav { position: static; }
+      section.file { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>git-in-claude</h1>
+    <p>
+      A starting point for projects that use Git with Claude Code. This page explains
+      what each file in the repository does and why it's there.
+    </p>
+  </header>
+
+  <main>
+    <nav aria-label="Files">
+      <h2>Files</h2>
+      <ul>
+        <li><a href="#claude-md">CLAUDE.md</a></li>
+        <li><a href="#claude-dir">.claude/</a></li>
+        <li class="nested"><a href="#settings">settings.json</a></li>
+        <li><a href="#docs-dir">docs/index.html</a></li>
+        <li><a href="#gitignore">.gitignore</a></li>
+        <li><a href="#license">LICENSE</a></li>
+        <li><a href="#readme">README.md</a></li>
+      </ul>
+    </nav>
+
+    <div>
+      <section class="file" id="claude-md">
+        <h2>CLAUDE.md</h2>
+        <p class="role">Instructions Claude Code reads at the start of every session.</p>
+        <p>
+          Claude Code loads this file automatically, so it's where the project's Git
+          workflow is written down. It's guidance: Claude follows it, but nothing
+          technically enforces it. The enforced rules live in
+          <a href="#settings"><code>.claude/settings.json</code></a>.
+        </p>
+        <h3>Sections</h3>
+        <ul>
+          <li><strong>Git workflow:</strong> check status and create a branch from <code>main</code> before starting work, using prefixes such as <code>feature/</code>, <code>fix/</code>, and <code>docs/</code>.</li>
+          <li><strong>Committing:</strong> small, focused commits; review <code>git diff --staged</code> first; stage files by name; never commit secrets; don't skip hooks.</li>
+          <li><strong>Pushing and sharing:</strong> never commit to <code>main</code>, ask before pushing, and never force-push.</li>
+          <li><strong>Destructive and history-changing commands:</strong> commands that can lose work, which need an explicit request and a warning first.</li>
+          <li><strong>Staying in sync:</strong> fetch before starting work, and stop on merge conflicts instead of guessing.</li>
+          <li><strong>Working efficiently:</strong> prefer short, read-only commands and avoid interactive flags.</li>
+        </ul>
+      </section>
+
+      <section class="file" id="claude-dir">
+        <h2>.claude/</h2>
+        <p class="role">Project-level configuration for Claude Code.</p>
+        <p>
+          Settings in this folder are committed, so they apply to everyone who opens the
+          repo in Claude Code. Personal overrides go in
+          <code>.claude/settings.local.json</code>, which stays out of version control.
+        </p>
+      </section>
+
+      <section class="file" id="settings">
+        <h2>.claude/settings.json</h2>
+        <p class="role">Permission rules that enforce the most important Git safeguards.</p>
+        <p>
+          Each rule matches a command Claude might run and puts it in one of three tiers.
+          When rules overlap, <strong>deny</strong> wins over <strong>ask</strong>, and
+          <strong>ask</strong> wins over <strong>allow</strong>.
+        </p>
+        <div class="tiers">
+          <div class="tier allow">
+            <h4>Allow: runs without a prompt (24 rules)</h4>
+            <p>Read-only commands such as <code>status</code>, <code>diff</code>, <code>log</code>, <code>show</code>, and <code>fetch</code>, plus <code>switch -c</code>, <code>add</code>, and <code>commit</code>. These are local and easy to undo.</p>
+          </div>
+          <div class="tier ask">
+            <h4>Ask: always prompts you first (20 rules)</h4>
+            <p>Commands that share work or change history: <code>push</code>, <code>pull</code>, <code>merge</code>, <code>rebase</code>, <code>reset</code>, <code>restore</code>, <code>checkout</code>, dropping stashes, deleting branches, <code>commit --amend</code>, and <code>gh pr</code>.</p>
+          </div>
+          <div class="tier deny">
+            <h4>Deny: blocked (26 rules)</h4>
+            <p>Force pushes, pushes to <code>main</code>, <code>reset --hard</code>, <code>clean -f</code>, <code>filter-branch</code>, <code>--no-verify</code>, changing global Git config, and reading <code>.env*</code>, <code>*.pem</code>, and bulky <code>.git</code> internals.</p>
+          </div>
+        </div>
+        <p class="note">
+          Rules match the start of a command, so a command with its flags in an unusual
+          order can slip past a pattern. For real protection, also turn on branch
+          protection for <code>main</code> on your Git host.
+        </p>
+      </section>
+
+      <section class="file" id="docs-dir">
+        <h2>docs/index.html</h2>
+        <p class="role">This page.</p>
+        <p>
+          A single self-contained HTML file with no dependencies. Open it directly in a
+          browser, or publish it with GitHub Pages by serving from the <code>/docs</code>
+          folder.
+        </p>
+      </section>
+
+      <section class="file" id="gitignore">
+        <h2>.gitignore</h2>
+        <p class="role">Files Git should never track.</p>
+        <p>Covers the usual clutter for Node, TypeScript, and Python projects, plus:</p>
+        <ul>
+          <li><strong>Secrets:</strong> <code>.env</code>, <code>.env.*</code> (except <code>.env.example</code>), and <code>*.pem</code> keys.</li>
+          <li><strong>Build output and caches:</strong> <code>node_modules/</code>, <code>dist/</code>, <code>build/</code>, <code>__pycache__/</code>, and similar.</li>
+          <li><strong>Machine-specific files:</strong> macOS metadata, editor settings, logs, and temp folders.</li>
+        </ul>
+        <p>Together with the <code>CLAUDE.md</code> rule to stage files by name, this keeps secrets and generated files out of commits.</p>
+      </section>
+
+      <section class="file" id="license">
+        <h2>LICENSE</h2>
+        <p class="role">The MIT License.</p>
+        <p>
+          Lets anyone use, copy, modify, and distribute the repo, provided the copyright
+          notice is kept. If you start a new project from this repo, replace or update it
+          to match your project's license.
+        </p>
+      </section>
+
+      <section class="file" id="readme">
+        <h2>README.md</h2>
+        <p class="role">The front page of the repository.</p>
+        <p>Explains the three ways to use the repo and gives step-by-step instructions for each:</p>
+        <ul>
+          <li><strong>As a template:</strong> clone it, start fresh Git history, and build a new project on top.</li>
+          <li><strong>As a reference:</strong> copy <code>CLAUDE.md</code> and merge the permission rules into an existing repository.</li>
+          <li><strong>As a sandbox:</strong> practice Git operations with Claude Code using the suggested exercises.</li>
+        </ul>
+      </section>
+
+      <footer>
+        <p>
+          Created by Chris Minnick for Chapter 9 of <cite>Claude Code For Dummies</cite>
+          (Wiley). Released under the <a href="#license">MIT License</a>.
+        </p>
+      </footer>
+    </div>
+  </main>
+</body>
+</html>

@@ -24,6 +24,7 @@ You can use it three ways:
 | `CLAUDE.md` | Workflow guidance Claude Code reads at the start of every session: branch naming, commit hygiene, rules for pushing, which commands are destructive, handling conflicts, and keeping Git output concise. |
 | `.claude/settings.json` | Project permission rules that enforce the most important parts of that guidance. |
 | `.gitignore` | Ignores common build output, caches, editor files, and secrets such as `.env` and `*.pem`. |
+| `docs/index.html` | A single-page web guide to the files in this repo. Open it in a browser, or publish it with GitHub Pages from the `/docs` folder. |
 
 ### Safeguards in `.claude/settings.json`
 
