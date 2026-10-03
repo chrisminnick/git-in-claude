@@ -28,10 +28,18 @@ this repo's `CLAUDE.md`.
 5. When the current graph matches the goal, the level is solved. A short explanation
    appears, along with the player's command count compared with par.
 
+**Commit labels:** commits are labeled `C1`, `C2`, `C3`, and so on, in the order they
+were created, instead of realistic SHAs. Short labels are easy to say aloud in class
+("`main` points to C3"). Each level's start state sets the first labels, and new commits
+continue the sequence. The labels appear inside the commit circles and in terminal
+output, for example `[main C4] Add search page` after `git commit` and
+`C4 Add search page` in `git log --oneline`. A note in level 1 explains that real Git
+uses SHAs such as `a1b2c3d`.
+
 **Matching rule:** two graphs match when they have the same commit structure (parent
 relationships), the same branch names pointing at corresponding commits, and the same
-`HEAD`. Commit IDs and the order commits were made in are ignored, so any valid solution
-counts.
+`HEAD`. Commit labels and the order commits were made in are ignored, so any valid
+solution counts, even one whose labels differ from the goal's.
 
 ## Supported commands
 
@@ -98,9 +106,10 @@ It links to the "Destructive and history-changing commands" section of `CLAUDE.m
   ```js
   // state
   {
-    commits: { c1: { parents: [] }, c2: { parents: ["c1"] } },
-    branches: { main: "c2", feature: "c1" },
-    head: { branch: "main" }   // or { commit: "c1" } for a detached HEAD, which is a future feature
+    commits: { C1: { parents: [] }, C2: { parents: ["C1"] } },
+    branches: { main: "C2", feature: "C1" },
+    head: { branch: "main" },  // or { commit: "C1" } for a detached HEAD, which is a future feature
+    nextId: 3                  // the next commit is labeled C3
   }
   ```
 
@@ -109,7 +118,7 @@ It links to the "Destructive and history-changing commands" section of `CLAUDE.m
   - `apply(state, cmd)` returns `{ state, output }` or `{ error }`. It never mutates
     its input, which makes `undo` a simple history stack.
   - `matches(state, goal)` returns a boolean. It canonicalizes both graphs by walking
-    from the branch tips, so commit IDs don't matter.
+    from the branch tips, so commit labels don't matter.
   - `isMerged(state, branch)` is used by `branch -d`.
 - **Rendering:** inline SVG. Each branch gets a lane (columns run left to right in
   commit order). Commits are circles, parent links are lines, and branch labels and
@@ -126,7 +135,7 @@ It links to the "Destructive and history-changing commands" section of `CLAUDE.m
 - The command input has focus on load. Up and down arrows recall previous commands,
   and `Enter` runs the current one.
 - Each graph has a text description for screen readers (for example, "main points to
-  commit 3; feature points to commit 2; HEAD is on main"), updated in an
+  C3; feature points to C2; HEAD is on main"), updated in an
   `aria-live` region.
 - Branch colors are paired with text labels, so color is never the only signal.
 - At phone width, the goal graph stacks above the current graph, and the terminal
@@ -154,7 +163,5 @@ These are listed as future levels:
 
 ## Open questions
 
-- Should commits show realistic short SHAs (`a1b2c3d`) or simple labels (`C1`, `C2`)?
-  Simple labels are easier to talk about in class.
 - Should the README link to the game, or only `docs/index.html`?
 - Is a par command count motivating or distracting for beginners?
